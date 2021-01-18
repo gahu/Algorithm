@@ -28,7 +28,7 @@ public class YouthShark {
 	
 	static ArrayList<Fish> fishes;
 	public static int ate;
-	static Fish[][] aqua;
+	static int[][] aqua;
 	static int[][] direction = {	// 0, 1, 2, 3, 4, 5, 6, 7, 8 --> 8가지 방향으로 1~8번
 			{0, -1, -1, 0, 1, 1, 1, 0, -1},
 			{0, 0, -1, -1, -1, 0, 1, 1, 1}
@@ -43,11 +43,11 @@ public class YouthShark {
 			int nx = shark.x + direction[1][shark.dir] * i;
 			int ny = shark.y + direction[0][shark.dir] * i;
 			
-			if(0 <= nx && nx < 4 && 0 <= ny && ny < 4 && aqua[nx][ny] != null && aqua[nx][ny].no > 0) {
-				Fish tmp = aqua[nx][ny];
+			if(0 <= nx && nx < 4 && 0 <= ny && ny < 4 && aqua[nx][ny] > 0) {
+				Fish tmp = fishes.get(aqua[nx][ny] - 1);
 				Fish newShark = new Fish(-1, tmp.dir, tmp.x, tmp.y, true);
 				tmp.isAlive = false;
-				aqua[nx][ny] = newShark;
+				aqua[nx][ny] = -1;
 				
 				sharkMove(eat + tmp.no, newShark);
 			}
@@ -55,34 +55,32 @@ public class YouthShark {
 	}
 	
 	static void fishesMove() {
-		int fishesMax = fishes.size();
-		int cnt = 0;
-		while(cnt < fishesMax) {
-			Fish fish = fishes.get(cnt);
+		for(Fish fish : fishes) {
+			if(!fish.isAlive) continue;
 			int dir = fish.dir;
 			int x = fish.x;
 			int y = fish.y;
 			
-			for(;;) {
-				int nx = x + direction[1][dir];
-				int ny = y + direction[0][dir];
+			for(int i = 0; i < 8; i++) {
+				int direc = dir % 8;
+				int nx = x + direction[1][direc];
+				int ny = y + direction[0][direc];
 				if(0 <= nx && nx < 4 && 0 <= ny && ny < 4) {
-					if(aqua[nx][ny] == null) {	// 빈 칸일 경우
+					if(aqua[nx][ny] == 0) {	// 빈 칸일 경우
 						aqua[nx][ny] = aqua[x][y];
-						aqua[x][y] = null;
+						aqua[x][y] = 0;
 						break;
-					} else if(aqua[nx][ny].no == -1) {	// 상어인 경우
+					} else if(aqua[nx][ny] == -1) {	// 상어인 경우
 						dir++;
 						if(dir == 8) dir = 1;
 					} else {					// 물고기가 있는 경우
-						Fish tmp = aqua[nx][ny];
+						Fish tmp = fishes.get(aqua[nx][ny] - 1);
 						aqua[nx][ny] = aqua[x][y];
-						aqua[x][y] = tmp;
+						aqua[x][y] = tmp.no;
 						break;
 					}
 				}
 			}
-			cnt++;
 		}
 	}
 
@@ -91,7 +89,7 @@ public class YouthShark {
 		StringTokenizer st = new StringTokenizer(br.readLine());
 		
 		fishes = new ArrayList<>();
-		aqua = new Fish[4][4];
+		aqua = new int[4][4];
 		Fish shark = null;
 		for (int i = 0; i < 4; i++) {
 			if(!st.hasMoreTokens()) st = new StringTokenizer(br.readLine());
@@ -100,9 +98,10 @@ public class YouthShark {
 				int dir = Integer.parseInt(st.nextToken());
 				if(i == 0 && j == 0) {
 					shark = new Fish(-1, dir, i, j, true);
+					aqua[0][0] = -1;
 				}
-				aqua[i][j] = new Fish(no, dir, i, j, true);
-				fishes.add(aqua[i][j]);
+				aqua[i][j] = no;
+				fishes.add(new Fish(no, dir, i, j, true));
 			}
 		}
 		
@@ -111,6 +110,16 @@ public class YouthShark {
 		ate = 0;	// 먹은 번호의 합 초기화
 		sharkMove(0, shark);
 		System.out.println(ate);
+	}
+	
+	static class Shark {
+		int ate, x, y, dir;
+		public Shark(int ate, int x, int y, int dir) {
+			this.ate = ate;
+			this.x = x;
+			this.y = y;
+			this.dir = dir;
+		}
 	}
 	
 	static class Fish implements Comparable<Fish>{
