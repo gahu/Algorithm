@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.StringTokenizer;
 
 public class YouthShark {
@@ -26,99 +27,120 @@ public class YouthShark {
 	//         위, 좌상, 좌, 좌하, 하, 우하, 우, 우상
 	// Output : 상어가 먹을 수 있는 물고기 번호의 합의 최댓값
 	
-	static ArrayList<Fish> fishes;
 	public static int ate;
-	static int[][] aqua;
-	static int[][] direction = {	// 0, 1, 2, 3, 4, 5, 6, 7, 8 --> 8가지 방향으로 1~8번
-			{0, -1, -1, 0, 1, 1, 1, 0, -1},
-			{0, 0, -1, -1, -1, 0, 1, 1, 1}
+	static int[][] direction = {	// 1, 2, 3, 4, 5, 6, 7, 8 --> 8가지 방향으로 1~8번
+			{-1, -1, 0, 1, 1, 1, 0, -1}, // x
+			{0, -1, -1, -1, 0, 1, 1, 1}, // y
 	};
 	
-	static void sharkMove(int eat, Fish shark) {
-		if(ate < eat) ate = eat;
+	static void sharkMove(int[][] arr, Shark shark, List<Fish> fishes) {
+		if(ate < shark.ate) ate = shark.ate;
 		
-		fishesMove();
+		fishesMove(arr, fishes);
 		
 		for (int i = 1; i < 4; i++) {
-			int nx = shark.x + direction[1][shark.dir] * i;
-			int ny = shark.y + direction[0][shark.dir] * i;
+			int nx = shark.x + direction[0][shark.dir] * i;
+			int ny = shark.y + direction[1][shark.dir] * i;
 			
-			if(0 <= nx && nx < 4 && 0 <= ny && ny < 4 && aqua[nx][ny] > 0) {
-				Fish tmp = fishes.get(aqua[nx][ny] - 1);
-				Fish newShark = new Fish(-1, tmp.dir, tmp.x, tmp.y, true);
-				tmp.isAlive = false;
-				aqua[nx][ny] = -1;
+			if(0 <= nx && nx < 4 && 0 <= ny && ny < 4 && arr[nx][ny] > 0) {	// 잡아먹는다.
+				int[][] copy = arrayCopy(arr);
+				List<Fish> fishesCopy = copyFishes(fishes);
 				
-				sharkMove(eat + tmp.no, newShark);
+				copy[shark.x][shark.y] = 0;
+				Fish tmp = fishesCopy.get(copy[nx][ny] - 1);
+				Shark newShark = new Shark(shark.ate + tmp.no, tmp.dir, tmp.x, tmp.y);
+				tmp.isAlive = false;
+				copy[nx][ny] = -1;
+				
+				sharkMove(copy, newShark, fishesCopy);
 			}
 		}
 	}
 	
-	static void fishesMove() {
+	static void fishesMove(int[][] aqua, List<Fish> fishes) {
 		for(Fish fish : fishes) {
 			if(!fish.isAlive) continue;
-			int dir = fish.dir;
-			int x = fish.x;
-			int y = fish.y;
 			
 			for(int i = 0; i < 8; i++) {
-				int direc = dir % 8;
-				int nx = x + direction[1][direc];
-				int ny = y + direction[0][direc];
-				if(0 <= nx && nx < 4 && 0 <= ny && ny < 4) {
-					if(aqua[nx][ny] == 0) {	// 빈 칸일 경우
-						aqua[nx][ny] = aqua[x][y];
-						aqua[x][y] = 0;
-						break;
-					} else if(aqua[nx][ny] == -1) {	// 상어인 경우
-						dir++;
-						if(dir == 8) dir = 1;
+				int direc = (fish.dir + i) % 8;
+				int nx = fish.x + direction[0][direc];
+				int ny = fish.y + direction[1][direc];
+				if(0 <= nx && nx < 4 && 0 <= ny && ny < 4 && aqua[nx][ny] > -1) {
+					aqua[fish.x][fish.y] = 0;
+					
+					if(aqua[nx][ny] == 0) {		// 빈 칸일 경우
+						fish.x = nx;
+						fish.y = ny;
 					} else {					// 물고기가 있는 경우
-						Fish tmp = fishes.get(aqua[nx][ny] - 1);
-						aqua[nx][ny] = aqua[x][y];
-						aqua[x][y] = tmp.no;
-						break;
+						Fish temp = fishes.get(aqua[nx][ny] - 1);
+	                    temp.x = fish.x;
+	                    temp.y = fish.y;
+	                    aqua[fish.x][fish.y] = temp.no;
+
+	                    fish.x = nx;
+	                    fish.y = ny;
 					}
+					
+					aqua[nx][ny] = fish.no;
+					fish.dir = direc;
+					break;
 				}
 			}
 		}
 	}
+	
+	static int[][] arrayCopy(int[][] original) {
+		int[][] copy = new int[4][4];
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				copy[i][j] = original[i][j];
+			}
+		}
+		return copy;
+	}
+	
+	static List<Fish> copyFishes(List<Fish> fishes) {
+		List<Fish> temp = new ArrayList<>();
+        fishes.forEach(e -> temp.add(new Fish(e.no, e.dir, e.x, e.y, e.isAlive)));
+        return temp;
+    }
 
 	public static void main(String[] args) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		StringTokenizer st = new StringTokenizer(br.readLine());
 		
-		fishes = new ArrayList<>();
-		aqua = new int[4][4];
-		Fish shark = null;
+		List<Fish> fishes = new ArrayList<>();
+		int[][] aqua = new int[4][4];
+		Shark shark = null;
 		for (int i = 0; i < 4; i++) {
 			if(!st.hasMoreTokens()) st = new StringTokenizer(br.readLine());
 			for (int j = 0; j < 4; j++) {
 				int no = Integer.parseInt(st.nextToken());
-				int dir = Integer.parseInt(st.nextToken());
-				if(i == 0 && j == 0) {
-					shark = new Fish(-1, dir, i, j, true);
-					aqua[0][0] = -1;
-				}
+				int dir = Integer.parseInt(st.nextToken()) - 1;
 				aqua[i][j] = no;
 				fishes.add(new Fish(no, dir, i, j, true));
+				if(i == 0 && j == 0) {
+					shark = new Shark(no, dir, i, j);
+					aqua[0][0] = -1;
+					ate = no;
+					fishes.get(0).isAlive = false;
+				}
 			}
 		}
 		
 		Collections.sort(fishes);
 		
-		ate = 0;	// 먹은 번호의 합 초기화
-		sharkMove(0, shark);
+		sharkMove(aqua, shark, fishes);
 		System.out.println(ate);
 	}
 	
 	static class Shark {
 		int ate, x, y, dir;
-		public Shark(int ate, int x, int y, int dir) {
+		public Shark(int ate, int dir, int x, int y) {
 			this.ate = ate;
+			this.dir = dir;
 			this.x = x;
 			this.y = y;
-			this.dir = dir;
 		}
 	}
 	
